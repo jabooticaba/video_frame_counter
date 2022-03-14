@@ -1,51 +1,75 @@
 import os
 import PySimpleGUI as sg
 
-from frame_counter import count_frames_manual, fps, video_reader
+from frame_counter import summary
 
 
 sg.theme('Dark Blue 3')
 
-layout = [[sg.Text('FPS counter')],
-      [sg.Text('Source for Folders', size=(15, 1)), sg.InputText(), sg.FolderBrowse()],
-      [sg.Text('Source for Files ', size=(15, 1)), sg.InputText(), sg.FileBrowse()],
-      [sg.Submit(), sg.Cancel()]]
+data = []
+headings = ['Filename', 'FPS', 'Frames', 'Length']
+row_counter = 0
 
-window = sg.Window('Указать путь к файлам', layout)
 
-event, values = window.read()
+def draw_table(data_list):
+    global row_counter
+    global data
 
-folder_path, file_path = values[0], values[1]       # get the data from the values dictionary
+    result = data_list
 
-print(folder_path, file_path)
+    # TODO Форматировать размер полей таблицы
+    result = [file_path, result[0], result[1], result[2]]
+    data.append(result)
+    row_counter += 1
 
-if folder_path:
-    dir_content = os.listdir(folder_path)
+    return data
 
-    for filename in dir_content:
-        file_path = os.sep.join([folder_path, filename])
 
-        try:
-            fps_value = fps(file_path)
-            frames = count_frames_manual(file_path)
-            lenght = frames/fps_value
+layout = [[sg.Text('Указать путь к файлам')],
+          [sg.Text('Source for Folders', size=(15, 1)), sg.InputText(), sg.FolderBrowse()],
+          [sg.Text('Source for Files ', size=(15, 1)), sg.InputText(), sg.FileBrowse()],
+          [sg.Submit(),sg.Push()],
+          [sg.Table(values=data, headings=headings,
+                    col_widths=[80, 10, 10, 10],
+                    auto_size_columns=True,
+                    justification='right',
+                    num_rows=5,
+                    alternating_row_color='light blue',
+                    key='-TABLE-',
+                    row_height=25)],
+          [sg.Button('Clear table'), sg.Push(), sg.Button('Exit')]
+          ]
 
-            # TODO Выводит попапы один за одним для каждого файла, переделать на таблицу результатов
-            sg.popup(f'fps:{fps_value}, frames:{frames}, lenght: {lenght}, filename:{file_path}')
+window = sg.Window('FPS counter', layout)
 
-        except Exception as e:
-            sg.popup_error(f'Error: {e}')
+while True:                             # The Event Loop
+    event, values = window.read()
+    folder_path, file_path = values[0], values[1]  # get the data from the values dictionary
 
-if file_path:
-    fps_value = fps(file_path)
-    frames = count_frames_manual(file_path)
-    lenght = frames / fps_value
+    if event == sg.WIN_CLOSED or event == 'Exit':
+        break
 
-    # TODO Переделать в виде таблицы в дополнительную секцию основного окна
-    sg.popup(f'fps:{fps_value}, frames:{frames}, lenght: {lenght}, filename:{file_path}')
+    if event == 'Clear':
+        values[0], values[1] = None, None
+        data = []
+        window['-TABLE-'].update('')
+
+    if folder_path:
+        dir_content = os.listdir(folder_path)
+
+        for filename in dir_content:
+            file_path = os.sep.join([folder_path, filename])
+
+            try:
+                window['-TABLE-'].update(values=draw_table(summary(file_path)))
+
+            except Exception as e:
+                sg.popup_error(f'Error: {e}')
+
+    if file_path:
+
+        window['-TABLE-'].update(values=draw_table(summary(file_path)))
+
 
 window.close()
-
-
-
 

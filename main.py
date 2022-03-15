@@ -25,10 +25,10 @@ def draw_table(data_list):
 
 
 layout = [[sg.Text('Указать путь к файлам')],
-          [sg.Text('Выбрать папку', size=(21, 1)), sg.InputText(), sg.FolderBrowse('Обзор')],
+          [sg.Text('Выбрать папку', size=(21, 1)), sg.InputText(do_not_clear=False), sg.FolderBrowse('Обзор', key='folder_browse')],
           [sg.Text('Выбрать файл', size=(21, 1)),
-           sg.InputText(),
-           sg.FileBrowse('Обзор', file_types=(('mp4 video', '*.mp4'),('ALL Files', '*.* *')))],
+           sg.InputText(do_not_clear=False),
+           sg.FileBrowse('Обзор', key='file_browse', file_types=(('mp4 video', '*.mp4'),('ALL Files', '*.* *')))],
           [sg.Submit('Вычислить'), sg.Push(), sg.Button('Копировать результат в буфер')],
           [sg.ProgressBar(10, orientation='h', size=(51, 2), border_width=0, key='progbar', visible=True)],
           [sg.Table(values=data, headings=headings,
@@ -45,7 +45,11 @@ window = sg.Window('FPS counter', layout)
 
 while True:
     event, values = window.read()
-    folder_path, file_path = values[0], values[1]  # get the data from the values dictionary
+
+    try:
+        folder_path, file_path = values[0], values[1]  # get the data from the values dictionary
+    except TypeError:  # ловим ошибку при выходе
+        pass
 
     if event in (sg.WIN_CLOSED, 'Exit'):
         break
@@ -54,7 +58,7 @@ while True:
         file_path = ''
         folder_path = ''
         df = DataFrame(data)
-        df.to_clipboard(index=False, header=True)
+        df.to_clipboard(index=False, header=False)
 
     if event == 'Очистить таблицу':
         data = []

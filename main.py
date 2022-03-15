@@ -25,10 +25,11 @@ def draw_table(data_list):
 
 
 layout = [[sg.Text('Указать путь к файлам')],
-          [sg.Text('Выбрать папку', size=(21, 1)), sg.InputText(do_not_clear=False), sg.FolderBrowse('Обзор', key='folder_browse')],
+          [sg.Text('Выбрать папку', size=(21, 1)), sg.InputText(do_not_clear=False),
+           sg.FolderBrowse('Обзор', key='folder_browse')],
           [sg.Text('Выбрать файл', size=(21, 1)),
            sg.InputText(do_not_clear=False),
-           sg.FileBrowse('Обзор', key='file_browse', file_types=(('mp4 video', '*.mp4'),('ALL Files', '*.* *')))],
+           sg.FileBrowse('Обзор', key='file_browse', file_types=(('mp4 video', '*.mp4'), ('ALL Files', '*.* *')))],
           [sg.Submit('Вычислить'), sg.Push(), sg.Button('Копировать результат в буфер')],
           [sg.ProgressBar(10, orientation='h', size=(51, 2), border_width=0, key='progbar', visible=True)],
           [sg.Table(values=data, headings=headings,
@@ -101,4 +102,3 @@ while True:
 
 
 window.close()
-

@@ -1,4 +1,5 @@
 import os
+from pandas import DataFrame
 import PySimpleGUI as sg
 
 from frame_counter import summary
@@ -7,18 +8,16 @@ from frame_counter import summary
 sg.theme('Dark Blue 3')
 
 data = []
-headings = ['Filename', 'FPS', 'Frames', 'Length']
+headings = ['File name', 'FPS  ', 'Frames', 'Length']
 row_counter = 0
 
 
 def draw_table(data_list):
     global row_counter
-    global data
 
     result = data_list
 
-    # TODO Форматировать размер полей таблицы
-    result = [file_path, result[0], result[1], result[2]]
+    result = [os.path.basename(file_path), result[0], result[1], result[2]]
     data.append(result)
     row_counter += 1
 
@@ -26,49 +25,75 @@ def draw_table(data_list):
 
 
 layout = [[sg.Text('Указать путь к файлам')],
-          [sg.Text('Source for Folders', size=(15, 1)), sg.InputText(), sg.FolderBrowse()],
-          [sg.Text('Source for Files ', size=(15, 1)), sg.InputText(), sg.FileBrowse()],
-          [sg.Submit(),sg.Push()],
+          [sg.Text('Выбрать папку', size=(21, 1)), sg.InputText(), sg.FolderBrowse('Обзор')],
+          [sg.Text('Выбрать файл', size=(21, 1)),
+           sg.InputText(),
+           sg.FileBrowse('Обзор', file_types=(('mp4 video', '*.mp4'),('ALL Files', '*.* *')))],
+          [sg.Submit('Вычислить'), sg.Push(), sg.Button('Копировать результат в буфер')],
+          [sg.ProgressBar(10, orientation='h', size=(51, 2), border_width=0, key='progbar', visible=True)],
           [sg.Table(values=data, headings=headings,
-                    col_widths=[80, 10, 10, 10],
-                    auto_size_columns=True,
-                    justification='right',
+                    auto_size_columns=False,
+                    col_widths=[39, 7, 7, 7],
+                    justification='left',
                     num_rows=5,
                     alternating_row_color='light blue',
-                    key='-TABLE-',
-                    row_height=25)],
-          [sg.Button('Clear table'), sg.Push(), sg.Button('Exit')]
+                    key='-TABLE-')],
+          [sg.Button('Очистить таблицу'), sg.Push(), sg.Button('Exit')]
           ]
 
 window = sg.Window('FPS counter', layout)
 
-while True:                             # The Event Loop
+while True:
     event, values = window.read()
     folder_path, file_path = values[0], values[1]  # get the data from the values dictionary
 
-    if event == sg.WIN_CLOSED or event == 'Exit':
+    if event in (sg.WIN_CLOSED, 'Exit'):
         break
 
-    if event == 'Clear':
-        values[0], values[1] = None, None
+    if event == 'Копировать результат в буфер':
+        file_path = ''
+        folder_path = ''
+        df = DataFrame(data)
+        df.to_clipboard(index=False, header=True)
+
+    if event == 'Очистить таблицу':
         data = []
+        file_path = ''
+        folder_path = ''
         window['-TABLE-'].update('')
+        window['progbar'].update_bar(0)
 
     if folder_path:
         dir_content = os.listdir(folder_path)
+        window['progbar'].update_bar(0, max=len(dir_content))
 
-        for filename in dir_content:
+        for count, filename in enumerate(dir_content):
             file_path = os.sep.join([folder_path, filename])
 
+            if os.path.splitext(file_path)[1] == '.mp4':
+                try:
+                    window['-TABLE-'].update(values=draw_table(summary(file_path)))
+                    window['progbar'].update_bar(count + 1)
+
+                except Exception as e:
+                    sg.popup(f'Ошибка: {e}', title='Error')
+
+                window.refresh()
+
+            else:
+                window['progbar'].update_bar(count + 1)
+                continue
+
+    elif file_path:
+        if os.path.splitext(file_path)[1] == '.mp4':
+            window['progbar'].update_bar(0, max=1)
             try:
                 window['-TABLE-'].update(values=draw_table(summary(file_path)))
-
+                window['progbar'].update_bar(1)
             except Exception as e:
-                sg.popup_error(f'Error: {e}')
-
-    if file_path:
-
-        window['-TABLE-'].update(values=draw_table(summary(file_path)))
+                sg.popup(f'Ошибка: {e}', title='Error')
+        else:
+            sg.popup(f'Выберите .mp4 файл', title='Error')
 
 
 window.close()
